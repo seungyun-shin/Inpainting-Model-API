@@ -1,3 +1,4 @@
+import sys
 import logging
 from abc import abstractmethod, ABC
 
@@ -10,7 +11,9 @@ import torch.nn.functional as F
 from joblib import Parallel, delayed
 from scipy import linalg
 
-from models.ade20k import SegmentationModule, NUM_CLASS, segm_options
+# 패키지 호출문제로 수정
+from ade20k import SegmentationModule, NUM_CLASS, segm_options
+# from models.ade20k import SegmentationModule, NUM_CLASS, segm_options
 from .fid.inception import InceptionV3
 from .lpips import PerceptualLoss
 from .ssim import SSIM

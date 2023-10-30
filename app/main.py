@@ -1,39 +1,35 @@
-from typing import List,Union
-from uuid import uuid4
+import sys
+from pathlib import Path
+current_dir = Path(__file__).resolve().parent
+sys.path.append(str(current_dir.parent))
+
 from fastapi import FastAPI
-from models import User, Gender, Role
+from models import InpaintModel
+
+import torch
+from inpainting_model.lama_inpaint import inpaint_img_with_lama
+from inpainting_model.utils import load_img_to_array, save_array_to_img
 
 app = FastAPI()
-
-db:List[User] = [
-    User(
-         id=uuid4(), 
-         first_name="Jamila", 
-         last_name="Ahmed",
-         middle_name="Ahmed",
-         gender=Gender.female,
-         roles=[Role.student, Role.student]
-    ),
-    User(
-         id=uuid4(), 
-         first_name="Jamila2", 
-         last_name="Ahmed2",
-         middle_name="Ahmed",
-         gender=Gender.female,
-         roles=[Role.admin, Role.student]
-    )
-]
 
 @app.get("/")
 def read_root():
     return {"Hello": "World"}
 
-@app.get("/api/v1/users")
-async def fetch_users():
-    return db
+@app.post("/api/inpaint/")
+async def inpaint(InpaintModel:InpaintModel):
 
-@app.post("/api/v1/users")
-async def register_user(user:User):
-    db.append(user)
-    return {"id": user.id}
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    img_path = str(current_dir.parent) +'/inpainting_model/input_img/'+ InpaintModel.img
+    out_dir = str(current_dir.parent) + '/inpainting_model/results/' +  Path(img_path).stem +'_result.png'
+    
+    img = load_img_to_array(img_path)
+    
+    lama_config ="../inpainting_model/lama/configs/prediction/default.yaml"
+    lama_ckpt = "../inpainting_model/pretrained_models/big-lama"
+    coord = InpaintModel.coord
+    img_inpainted = inpaint_img_with_lama(img, lama_config, lama_ckpt, coord, device=device)
+    save_array_to_img(img_inpainted, out_dir)
+
+    return {"succeed"}
 

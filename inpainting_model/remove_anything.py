@@ -6,7 +6,7 @@ from pathlib import Path
 from matplotlib import pyplot as plt
 
 from lama_inpaint import inpaint_img_with_lama
-from utils import load_img_to_array, save_array_to_img, dilate_mask, show_mask, show_points, get_clicked_point
+from utils import load_img_to_array, save_array_to_img
 
 
 def setup_args(parser):
@@ -62,6 +62,5 @@ if __name__ == "__main__":
     out_dir.mkdir(parents=True, exist_ok=True)
 
     img_inpainted_p = out_dir / f"inpainted_result_image.png"
-    mask=0
-    img_inpainted = inpaint_img_with_lama(img, mask, args.lama_config, args.lama_ckpt, device=device)
+    img_inpainted = inpaint_img_with_lama(img, args.lama_config, args.lama_ckpt, device=device)
     save_array_to_img(img_inpainted, img_inpainted_p)

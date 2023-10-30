@@ -9,6 +9,7 @@ from PIL import Image
 from omegaconf import OmegaConf
 from pathlib import Path
 from typing import Tuple, List
+import cv2
 
 
 os.environ['OMP_NUM_THREADS'] = '1'
@@ -18,26 +19,32 @@ os.environ['VECLIB_MAXIMUM_THREADS'] = '1'
 os.environ['NUMEXPR_NUM_THREADS'] = '1'
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "lama"))
+sys.path.insert(0, str(Path(__file__).resolve().parent / "lama" / "models"))
+# sys.path.append('C:/Users/ssg/Desktop/local_workspace/Inpainting_API/inpainting_model/lama')
 from saicinpainting.evaluation.utils import move_to_device
 from saicinpainting.training.trainers import load_checkpoint
 from saicinpainting.evaluation.data import pad_tensor_to_modulo
 
-from utils import load_img_to_array, save_array_to_img
+from .utils import load_img_to_array, save_array_to_img
 
 
 @torch.no_grad()
 def inpaint_img_with_lama(
         img: np.ndarray,
-        mask: np.ndarray,
         config_p: str,
         ckpt_p: str,
+        coord: List,
         mod=8,
         device="cuda",
 ): 
-    rectangles = [((55, 134), (400, 206)), ((205, 309), (352, 348)), ((205, 275), (308, 315)), ((206, 244), (383, 286)), ((204, 206), (340, 245))]
-    # rectangles = [((55, 134), (400, 206))]
-    mask = create_mask_from_rects(img.shape, rectangles)
-    # mask = create_mask_from_rect(img.shape, top_left, bottom_right)
+    polygon_points_list = coord
+    mask = create_mask_from_polygon(img.shape, polygon_points_list)
+
+    # 마스크를 이미지 파일로 저장
+    cv2.imwrite('C:/Users/ssg/Desktop/local_workspace/Inpainting_API/inpainting_model/results/mask_image.jpg', mask)
+    masked_img = cv2.bitwise_and(img, img, mask=mask)
+    cv2.imwrite('C:/Users/ssg/Desktop/local_workspace/Inpainting_API/inpainting_model/results/mask_image_origin.jpg', masked_img)
+
     assert len(mask.shape) == 2
     if np.max(mask) == 1:
         mask = mask * 255
@@ -76,12 +83,8 @@ def inpaint_img_with_lama(
     batch = move_to_device(batch, device)
     batch['mask'] = (batch['mask'] > 0) * 1
 
-    print('batch dictionary before model input : ', batch)
-
     batch = model(batch)
     
-    print('batch dictionary after model input : ', batch)
-
     cur_res = batch[predict_config.out_key][0].permute(1, 2, 0)
     cur_res = cur_res.detach().cpu().numpy()
 
@@ -97,10 +100,16 @@ def inpaint_img_with_lama(
 #     mask[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]] = 1
 #     return mask
 
-def create_mask_from_rects(img_shape: Tuple[int, int, int], rectangles: List[Tuple[Tuple[int, int], Tuple[int, int]]]):
-    mask = np.zeros(img_shape[:2], dtype=np.uint8)
-    for top_left, bottom_right in rectangles:
-        mask[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]] = 1
+# def create_mask_from_rects(img_shape: Tuple[int, int, int], rectangles: List[Tuple[Tuple[int, int], Tuple[int, int]]]):
+#     mask = np.zeros(img_shape[:2], dtype=np.uint8)
+#     for top_left, bottom_right in rectangles:
+#         mask[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]] = 1
+#     return mask
+
+def create_mask_from_polygon(image_shape, polygon_points_list):
+    mask = np.zeros(image_shape[:2], dtype=np.uint8)
+    for polygon_points in polygon_points_list:
+        cv2.fillPoly(mask, [np.array(polygon_points, dtype=np.int32)], 255)
     return mask
 
 def build_lama_model(        
