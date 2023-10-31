@@ -3,7 +3,7 @@ from pathlib import Path
 current_dir = Path(__file__).resolve().parent
 sys.path.append(str(current_dir.parent))
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from models import InpaintModel
 
 import torch
@@ -22,7 +22,8 @@ async def inpaint(InpaintModel:InpaintModel):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     img_path = str(current_dir.parent) +'/inpainting_model/input_img/'+ InpaintModel.img
     out_dir = str(current_dir.parent) + '/inpainting_model/results/' +  Path(img_path).stem +'_result.png'
-    
+    if not Path(img_path).is_file():
+        raise HTTPException(status_code=400, detail="Image not found")
     img = load_img_to_array(img_path)
     
     lama_config ="../inpainting_model/lama/configs/prediction/default.yaml"
