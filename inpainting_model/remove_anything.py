@@ -62,5 +62,5 @@ if __name__ == "__main__":
     out_dir.mkdir(parents=True, exist_ok=True)
 
     img_inpainted_p = out_dir / f"inpainted_result_image.png"
-    img_inpainted = inpaint_img_with_lama(img, args.lama_config, args.lama_ckpt, device=device)
+    img_inpainted = inpaint_img_with_lama(img, args.lama_config, args.lama_ckpt, args.coord, device=device)
     save_array_to_img(img_inpainted, img_inpainted_p)
