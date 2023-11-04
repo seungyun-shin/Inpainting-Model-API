@@ -1,12 +1,14 @@
 import torch
 import sys
-import argparse
-import numpy as np
 from pathlib import Path
-from matplotlib import pyplot as plt
+current_dir = Path(__file__).resolve().parent
+sys.path.append(str(current_dir.parent))
+import argparse
+from pathlib import Path
+import json
 
-from lama_inpaint import inpaint_img_with_lama
-from utils import load_img_to_array, save_array_to_img
+from inpainting_model.lama_inpaint import inpaint_img_with_lama
+from inpainting_model.utils import load_img_to_array, save_array_to_img
 
 
 def setup_args(parser):
@@ -15,52 +17,31 @@ def setup_args(parser):
         help="Path to a single input img",
     )
     parser.add_argument(
-        "--output_dir", type=str, required=False,
-        default="./results",
-        help="Output path to the directory with results.",
-    )
-    parser.add_argument(
-        "--point_coords", type=float, nargs='+', required=True,
-        help="The coordinate of the point prompt, [coord_W coord_H].",
-    )
-    parser.add_argument(
-        "--lama_config", type=str,
-        default="./lama/configs/prediction/default.yaml",
-        help="The path to the config file of lama model. "
-             "Default: the config of big-lama",
-    )
-    parser.add_argument(
-        "--lama_ckpt", type=str, required=False,
-        default="./pretrained_models/big-lama",
-        help="The path to the lama checkpoint.",
+        "--point_coords", type=str, required=True,
+        help="The coordinate of the point list prompt.",
     )
 
 
 if __name__ == "__main__":
     """Example usage:
     python remove_anything.py \
-        --input_img FA_demo/FA1_dog.png \
-        --coords_type key_in \
-        --point_coords 750 500 \
-        --point_labels 1 \
-        --dilate_kernel_size 15 \
-        --output_dir ./results \
-        --sam_model_type "vit_h" \
-        --sam_ckpt sam_vit_h_4b8939.pth \
-        --lama_config lama/configs/prediction/default.yaml \
-        --lama_ckpt big-lama 
+        --input_img sign.jpg \
+        --point_coords "[[[50,138], [396,154], [397,208], [48,194]],[[196,211], [383,218], [385,352], [193,350]]]"
     """
     parser = argparse.ArgumentParser()
     setup_args(parser)
     args = parser.parse_args(sys.argv[1:])
+    
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    img_path = str(current_dir.parent) +'/inpainting_model/input_img/'+ args.input_img
+    out_dir = str(current_dir.parent) + '/inpainting_model/results/' +  Path(img_path).stem +'_result.png'
 
-    img = load_img_to_array(args.input_img)
+    img = load_img_to_array(img_path)
 
-    img_stem = Path(args.input_img).stem
-    out_dir = Path(args.output_dir) / img_stem
-    out_dir.mkdir(parents=True, exist_ok=True)
+    lama_config ="../inpainting_model/lama/configs/prediction/default.yaml"
+    lama_ckpt = "../inpainting_model/pretrained_models/big-lama"
 
-    img_inpainted_p = out_dir / f"inpainted_result_image.png"
-    img_inpainted = inpaint_img_with_lama(img, args.lama_config, args.lama_ckpt, args.coord, device=device)
-    save_array_to_img(img_inpainted, img_inpainted_p)
+    point_coords = json.loads(args.point_coords)
+
+    img_inpainted = inpaint_img_with_lama(img, lama_config, lama_ckpt, point_coords, device=device)
+    save_array_to_img(img_inpainted, out_dir)

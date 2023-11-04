@@ -19,3 +19,6 @@ packaging
 scikit-learn
 wldhx.yadisk-direct
 timm
+fastapi
+uvicorn[standard]
+
