@@ -25,9 +25,9 @@ python remove_anything.py \
 ## 💡 Example Demo
 <table>
   <tr>
-    <td><img src="./inpainting_model/example/person/sign.jpg" width="100%"></td>
-    <td><img src="./inpainting_model/example/person/sign_masked.jpg" width="100%"></td>
-    <td><img src="./inpainting_model/example/person/sign_result.png" width="100%"></td>
+    <td><img src="./inpainting_model/example/sign.jpg" width="100%"></td>
+    <td><img src="./inpainting_model/example/sign_masked.jpg" width="100%"></td>
+    <td><img src="./inpainting_model/example/sign_result.png" width="100%"></td>
   </tr>
 </table>
 
