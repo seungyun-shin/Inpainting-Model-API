@@ -15,6 +15,7 @@ os.environ['OPENBLAS_NUM_THREADS'] = '1'
 os.environ['MKL_NUM_THREADS'] = '1'
 os.environ['VECLIB_MAXIMUM_THREADS'] = '1'
 os.environ['NUMEXPR_NUM_THREADS'] = '1'
+current_dir = Path(__file__).resolve().parent
 sys.path.insert(0, str(Path(__file__).resolve().parent / "lama"))
 sys.path.insert(0, str(Path(__file__).resolve().parent / "lama" / "models"))
 
@@ -34,11 +35,10 @@ def inpaint_img_with_lama(
 ): 
     polygon_points_list = coord
     mask = create_mask_from_polygon(img.shape, polygon_points_list)
-
     # 마스크를 이미지 파일로 저장
-    cv2.imwrite('C:/Users/ssg/Desktop/local_workspace/Inpainting_API/inpainting_model/results/mask_image.jpg', mask)
+    cv2.imwrite(str(current_dir.parent) + '/inpainting_model/results/mask_image.jpg', mask)
     masked_img = cv2.bitwise_and(img, img, mask=mask)
-    cv2.imwrite('C:/Users/ssg/Desktop/local_workspace/Inpainting_API/inpainting_model/results/mask_image_origin.jpg', masked_img)
+    cv2.imwrite(str(current_dir.parent) + '/inpainting_model/results/mask_image_origin.jpg', masked_img)
 
     assert len(mask.shape) == 2
     if np.max(mask) == 1:
