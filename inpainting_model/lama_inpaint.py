@@ -10,11 +10,7 @@ from pathlib import Path
 from typing import List
 import cv2
 
-os.environ['OMP_NUM_THREADS'] = '1'
-os.environ['OPENBLAS_NUM_THREADS'] = '1'
-os.environ['MKL_NUM_THREADS'] = '1'
-os.environ['VECLIB_MAXIMUM_THREADS'] = '1'
-os.environ['NUMEXPR_NUM_THREADS'] = '1'
+# 경로설정
 current_dir = Path(__file__).resolve().parent
 sys.path.insert(0, str(Path(__file__).resolve().parent / "lama"))
 sys.path.insert(0, str(Path(__file__).resolve().parent / "lama" / "models"))
@@ -24,6 +20,7 @@ from saicinpainting.training.trainers import load_checkpoint
 from saicinpainting.evaluation.data import pad_tensor_to_modulo
 from .utils import load_img_to_array, save_array_to_img
 
+# 데코레이터를 사용하여 해당 함수가 gradient를 계산하지 않도록 설정합니다.
 @torch.no_grad()
 def inpaint_img_with_lama(
         img: np.ndarray,
@@ -33,15 +30,18 @@ def inpaint_img_with_lama(
         mod=8,
         device="cuda",
 ): 
+    # 인페인팅 함수 정의
     polygon_points_list = coord
     mask = create_mask_from_polygon(img.shape, polygon_points_list)
-    # 마스크를 이미지 파일로 저장
+    # 마스크된 영역 확인용, 마스크 이미지 저장
     cv2.imwrite(str(current_dir.parent) + '/inpainting_model/results/mask_image.jpg', mask)
     masked_img = cv2.bitwise_and(img, img, mask=mask)
     cv2.imwrite(str(current_dir.parent) + '/inpainting_model/results/mask_image_origin.jpg', masked_img)
 
+    # 마스크는 2차원이어야 함을 확인
     assert len(mask.shape) == 2
     if np.max(mask) == 1:
+        # 마스크 값을 0과 255 사이로 스케일링
         mask = mask * 255
     img = torch.from_numpy(img).float().div(255.)
     mask = torch.from_numpy(mask).float()
@@ -69,7 +69,9 @@ def inpaint_img_with_lama(
         model.to(device)
 
     batch = {}
+    # 이미지를 배치 형태로 변환
     batch['image'] = img.permute(2, 0, 1).unsqueeze(0)
+    # 마스크를 배치 형태로 변환
     batch['mask'] = mask[None, None]
     unpad_to_size = [batch['image'].shape[2], batch['image'].shape[3]]
     batch['image'] = pad_tensor_to_modulo(batch['image'], mod)
@@ -101,48 +103,31 @@ def setup_args(parser):
         help="Path to a single input img",
     )
     parser.add_argument(
-        "--input_mask_glob", type=str, required=True,
-        help="Glob to input masks",
-    )
-    parser.add_argument(
-        "--output_dir", type=str, required=True,
-        help="Output path to the directory with results.",
-    )
-    parser.add_argument(
-        "--lama_config", type=str,
-        default="./lama/configs/prediction/default.yaml",
-        help="The path to the config file of lama model. "
-             "Default: the config of big-lama",
-    )
-    parser.add_argument(
-        "--lama_ckpt", type=str, required=True,
-        help="The path to the lama checkpoint.",
+        "--point_coords", type=str, required=True,
+        help="The coordinate of the point list prompt.",
     )
 
 
 if __name__ == "__main__":
     """Example usage:
-    python lama_inpaint.py \
-        --input_img FA_demo/FA1_dog.png \
-        --input_mask_glob "results/FA1_dog/mask*.png" \
-        --output_dir results \
-        --lama_config lama/configs/prediction/default.yaml \
-        --lama_ckpt big-lama 
+    python remove_anything.py \
+        --input_img sign.jpg \
+        --point_coords "[[[50,138], [396,154], [397,208], [48,194]],[[196,211], [383,218], [385,352], [193,350]]]"
     """
     parser = argparse.ArgumentParser()
     setup_args(parser)
     args = parser.parse_args(sys.argv[1:])
+    
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    img_path = str(current_dir.parent) +'/inpainting_model/input_img/'+ args.input_img
+    out_dir = str(current_dir.parent) + '/inpainting_model/results/' +  Path(img_path).stem +'_result.png'
 
-    img_stem = Path(args.input_img).stem
-    mask_ps = sorted(glob.glob(args.input_mask_glob))
-    out_dir = Path(args.output_dir) / img_stem
-    out_dir.mkdir(parents=True, exist_ok=True)
+    img = load_img_to_array(img_path)
 
-    img = load_img_to_array(args.input_img)
-    for mask_p in mask_ps:
-        mask = load_img_to_array(mask_p)
-        img_inpainted_p = out_dir / f"inpainted_with_{Path(mask_p).name}"
-        img_inpainted = inpaint_img_with_lama(
-            img, mask, args.lama_config, args.lama_ckpt, device=device)
-        save_array_to_img(img_inpainted, img_inpainted_p)
+    lama_config ="../inpainting_model/lama/configs/prediction/default.yaml"
+    lama_ckpt = "../inpainting_model/pretrained_models/big-lama"
+
+    point_coords = json.loads(args.point_coords)
+
+    img_inpainted = inpaint_img_with_lama(img, lama_config, lama_ckpt, point_coords, device=device)
+    save_array_to_img(img_inpainted, out_dir)
