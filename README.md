@@ -22,6 +22,26 @@ python remove_anything.py \
     --input_img sign.jpg \
     --point_coords "[[[50,138], [396,154], [397,208], [48,194]],[[196,211], [383,218], [385,352], [193,350]]]"
 ```
+
+## 💡 API 
+- `app/` 경로에서 Fast API 실행
+```bash
+uvicorn main:app --reload
+```
+
+## 💡 ENDPOINT
+- Inpaint 요청 POST : `/api/inpaint/`
+POST BODY 형식 예시
+```bash
+{
+  "img": "sign.jpg",
+  "coord": [
+    [[50,138], [396,154], [397,208], [48,194]],
+    [[196,211], [383,218], [385,352], [193,350]]
+    ]
+}
+```
+
 ## 💡 Example Demo
 <table>
   <tr>
