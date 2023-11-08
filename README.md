@@ -42,6 +42,18 @@ POST BODY 형식 예시
 }
 ```
 
+## 💡 DOCKER
+- Dockerfile dir : `/inpainting_model/lama/docker/Dockerfile`
+- Check if the gpu is available before
+- If you can't use gpu, remove gpu parameter when running Docker container
+```bash
+$ docker build -t {image_name} .
+$ docker run --gpus all -it -p 8000:8000 -v (pwd):/workspace --name {container_name} {image_name} 
+
+# Runing Fast API server
+$ uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+```
+
 ## 💡 Example Demo
 <table>
   <tr>
